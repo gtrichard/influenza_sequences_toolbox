@@ -1,0 +1,144 @@
+#!/bin/bash
+
+# Define usage function
+usage() {
+    echo " Influenza Segments Concatenator, by Gautier Richard, 05/05/2023.
+ Concatenates segments of complete genomes from IAV strains/samples stored in a single fasta file. 
+ Requires SeqKit to be installed in your current environment.
+ Fasta headers require: A/text/text/characters/4digits(...)Segment(...)
+ Segment being: PB2, PB1, PA, HA, NP, NA, M, NS.
+ Usage: $0 
+    [ -f ] FASTA file name. Mandatory. Example: -f seq_to_cat.fasta
+    [ -s ] Field separator in the fasta header. Optional but strongly recommended to properly find segments. Example: -s _
+    [ -n ] Actual N character chain to remove sequences of low quality. Optional, defaults to NNNNNNNNNN. Example: -n NNNNN
+    [ -h ] Prints help."
+}
+
+# Set default values for arguments
+arg_s=""
+arg_n="NNNNNNNNNN"
+
+# Parse arguments with getopt
+while getopts "f:s::n::h" opt; do
+  case $opt in
+    f)
+      arg_f="${OPTARG}"
+      ;;
+    s)
+      arg_s="${OPTARG}"
+      ;;
+    n)
+      arg_n="${OPTARG}"
+      ;;
+    h)
+      usage
+      exit 0
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      usage
+      exit 1
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+# Check if arg_f is empty
+if [ -z "$arg_f" ]; then
+  echo "[ ERROR  ] No input fasta file provided. Example: $0 -f fasta_input_file.fasta"
+  usage
+  exit 1
+fi
+
+echo "[ INFO  ] Concatenating Influenza D segments based on segment names finding (PB2, PB1...) for each strain (A/text/text/characters/4digits)."
+echo "[ INFO  ] Fasta file analysed: $arg_f"
+echo "[ INFO  ] Fasta header separator used: $arg_s"
+echo "[ INFO  ] Sequence to flag and remove bad quality sequences: $arg_n"
+
+name="$(basename ${arg_f} .fasta)"
+name="$(basename $name .fa)"
+
+IDs=$(grep ">" ${arg_f} | sed 's/.*\(A\/[A-Za-z]\)/\1/g' | sed 's/\(A\/[A-Za-z].*\/[A-Za-z].*\/.*\/[0-9]\{4\}\).*/\1/' | sort | uniq)
+echo "" > $name.concatenated.fasta
+
+strain_number=$(echo "$IDs" | wc -l)
+seq_number=$(grep ">" $arg_f | wc -l)
+
+echo "[ INFO  ] Processing $strain_number strains and $seq_number sequences"
+
+START=$(date +%s)
+time=$(date)
+echo "[ INFO  ] Starting sequences concatenation at $time"
+
+echo "$IDs" | while read -r l
+	do
+		echo "" > ${arg_f}.tmp
+		seqs=$(seqkit grep -r -n -p "$l" ${arg_f})
+		PB2=$(echo "$seqs" | grep ".${arg_s}"PB2"" | sed 's/>.*/>/g')
+		PB1=$(echo "$seqs" | grep ".${arg_s}"PB1"" | sed 's/>.*/>/g')
+		PA=$(echo "$seqs" | grep ".${arg_s}"PA"" | sed 's/>.*/>/g')
+		HA=$(echo "$seqs" | grep ".${arg_s}"HA"" | sed 's/>.*/>/g')
+		NP=$(echo "$seqs" | grep ".${arg_s}"NP"" | sed 's/>.*/>/g')
+		NA=$(echo "$seqs" | grep ".${arg_s}"NA"" | sed 's/>.*/>/g')
+		M=$(echo "$seqs" | grep ".${arg_s}"M"" | sed 's/>.*/>/g')
+		NS=$(echo "$seqs" | grep ".${arg_s}"NS"" | sed 's/>.*/>/g')
+		all=$(echo $PB2$PB1$PA$HA$NP$NA$M$NS)
+		count=$(echo "$seqs" | grep ">" | wc -l )
+		if [ "$all" != ">>>>>>>>" ]
+		then
+			echo "[ ERROR ] $count segments found: could be missing/duplicated sequences or bad fasta headers. Skipping $l."
+			continue
+		fi
+
+		echo -ne "["
+		echo "$seqs" | seqkit grep -r -p ".${arg_s}"PB2"" >> ${arg_f}.tmp
+		echo -ne "█"
+		echo "$seqs" | seqkit grep -r -p ".${arg_s}"PB1"" >> ${arg_f}.tmp
+		echo -ne "█"
+		echo "$seqs" | seqkit grep -r -p ".${arg_s}"PA"" >> ${arg_f}.tmp
+		echo -ne "█"
+		echo "$seqs" | seqkit grep -r -p ".${arg_s}"HA"" >> ${arg_f}.tmp
+		echo -ne "█"
+		echo "$seqs" | seqkit grep -r -p ".${arg_s}"NP"" >> ${arg_f}.tmp
+		echo -ne "█"
+		echo "$seqs" | seqkit grep -r -p ".${arg_s}"NA"" >> ${arg_f}.tmp
+		echo -ne "█"
+		echo "$seqs" | seqkit grep -r -p ".${arg_s}"M"" >> ${arg_f}.tmp
+		echo -ne "█"
+		echo "$seqs" | seqkit grep -r -p ".${arg_s}"NS"" >> ${arg_f}.tmp
+		echo -ne "█"
+		echo -ne "]"
+		echo -ne " [OK] $count segments concatenated for $l."
+
+		seq=$(sed '/^>/d' ${arg_f}.tmp)
+
+		NNNN=$(seqkit grep -s -r -p ${arg_n} ${arg_f}.tmp | wc -l)
+
+		if [ "$NNNN" -gt "2" ]
+		then
+        		echo -ne " [ERROR] ${arg_n} sequence found, skipping strain."
+				echo ""
+        		continue
+		else
+			echo ">$l" "$seq" >> $name.concatenated.fasta
+			echo -ne " [OK] Sequence quality is good."
+			echo ""
+		fi
+	done
+	
+seqkit seq -v -u $name.concatenated.fasta > $name.concatenated.tmp
+mv $name.concatenated.tmp $name.concatenated.fasta
+rm ${arg_f}.tmp
+	
+END=$(date +%s);
+time=$(echo $((END-START)) | awk '{print int($1/60)"min and "int($1%60)"sec"}')
+echo "[ INFO  ] Finished in $time."
+
+out_strains=$(grep ">" $name.concatenated.fasta | wc -l)
+echo "[ INFO  ] Complete genomes concatenated: $out_strains/$strain_number"
+echo "[ INFO  ] Results stored in $name.concatenated.fasta"
+
