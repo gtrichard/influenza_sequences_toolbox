@@ -7,7 +7,7 @@ The available tools are quickly presented below, refer to their command-line man
 
 | Tool name         | Description                                          |
 | ----------------- | ---------------------------------------------------- |
-| [concatenateSegments] | Takes a fasta file as input and concatenates all 8 segments for each strain/sample if the sequence is of good quality. |
+| concatenateSegments | Takes a fasta file as input and concatenates all 8 segments for each strain/sample if the sequence is of good quality. |
 
 
 ## Citation
