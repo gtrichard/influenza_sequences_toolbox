@@ -3,8 +3,6 @@ A set of scripts and bioinformatic tools to process, handle and analyse Influenz
 
 ## Installation
 
-Simply clone this repository on your machine and add the bin folder to your PATH.
-
 ```
 conda create -n influenza_toolbox -c bioconda seqkit
 conda activate influenza_toolbox
