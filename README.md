@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7899721.svg)](https://doi.org/10.5281/zenodo.7899721)
+
 # Influenza Sequences Toolbox
 A set of scripts and bioinformatic tools to process, handle and analyse Influenza viruses sequences.
 
@@ -27,5 +29,6 @@ The available tools are quickly presented below, refer to their command-line man
 
 ## Citation
 
-If you use some of these scripts in your work, please cite this repository using the following citation:
+If you use some of these scripts in your work, please cite this repository using the following DOI:
 
+Gautier RICHARD. (2023, May 5). gtrichard/influenza_sequences_toolbox: Influenza Sequences Toolbox. Zenodo. https://doi.org/10.5281/zenodo.7899721
