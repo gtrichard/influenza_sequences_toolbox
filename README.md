@@ -6,12 +6,12 @@ A set of scripts and bioinformatic tools to process, handle and analyse Influenz
 ```
 conda create -n influenza_toolbox -c bioconda seqkit
 conda activate influenza_toolbox
-bin_path=$(which seqkit)
+bin_path=$(which seqkit | sed 's/seqkit$//g')
 git clone https://github.com/gtrichard/influenza_sequences_toolbox
-cp influenza_sequences_toolbox/bin/* $bin_path/.
+cp influenza_sequences_toolbox/bin/* $bin_path
 ```
 
-Galaxy versions of the tool will be developped later.
+Galaxy versions of the tools will be developped later.
 
 
 ## Tools
