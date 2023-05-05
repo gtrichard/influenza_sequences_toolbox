@@ -1,6 +1,21 @@
 # Influenza Sequences Toolbox
 A set of scripts and bioinformatic tools to process, handle and analyse Influenza viruses sequences.
 
+## Installation
+
+Simply clone this repository on your machine and add the bin folder to your PATH.
+
+```
+conda create -n influenza_toolbox -c bioconda seqkit
+conda activate influenza_toolbox
+bin_path=$(which seqkit)
+git clone https://github.com/gtrichard/influenza_sequences_toolbox
+cp influenza_sequences_toolbox/bin/* $bin_path/.
+```
+
+Galaxy versions of the tool will be developped later.
+
+
 ## Tools
 
 The available tools are quickly presented below, refer to their command-line manual for more in-depth explanations about their usage.
