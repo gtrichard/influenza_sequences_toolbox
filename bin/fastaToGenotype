@@ -1,0 +1,149 @@
+#!/bin/bash
+
+# Define usage function
+usage() {
+    echo " Influenza Segments Genotyper, by Gautier Richard, 30/11/2023.
+ Genotypes segments of IAV strains/samples stored in a single fasta file using a BLAST database made with makeblastdb with specific headers formats.
+ Requires SeqKit and BLAST to be installed in your current environment.
+ 
+ BLAST is recommended to be installed in your OS directly, conda installations of BLAST tend be 10 times slower.
+
+ An internal check is made to ensure that the genotypes called are accurate. This works by comparing the best match to the genotype of the other matches.
+ The potential thrown errors in the *.log file can thus simply be due to how your database is made (not enough consistent best matches for a single query).
+ 
+ The tool is database agnostic, i.e. it works for virutally any influenza A sequences (human, avian, swine...). 
+ What matters is the quality of annotation of your database and following the format described below.
+ Database annotation is not performed by this tool, this should be done by careful phylogenetic analyses.
+
+ This tool outputs two files:
+    .genotyped.fasta ; which contains the input fasta sequences with the genotype of each segment added at the end of the headers in the format : |genotype
+    .genotyped.log ; which contains a summary of the blast results for each sequence, with potentially erroneous genotypes attributions at the start of the file. 
+
+ Usage: $0 
+    
+    [ -f ] FASTA file name. Mandatory. Example: -f seq_to_cat.fasta
+    Fasta headers require a specific format: A/text/text/characters/4digits(...)Segment(...)
+    Segment being: PB2, PB1, PA, HA, NP, NA, NS, M/MP.
+
+    [ -d ] BLAST database made by makeblastdb used by the tool to assign genotypes to segments. The database fasta headers must have a specific format:
+    >sequence/name;whatever_genotype_name;Gene-genotype-assigned
+    >A/sw/France/22-195423/2019;H1N1pdm-HA-1A.3.3.2
+
+    If a sequence matches the 2nd entry, it will assign 1A.3.3.2 as a genotype, i.e. what is after HA-, NA-, PB2-, PB1-, PA-, NP-, NS-, M- / MP- in the db headers.
+    The sequence name or the genotype present before the -HA doesn't matter, it is still important however to better investigate the BLAST results.
+    The quality of the database is of utmost importance.
+
+    [ -h ] Prints help."
+}
+
+# Set default values for arguments
+arg_s=""
+
+# Parse arguments with getopt
+while getopts "f:d::h" opt; do
+  case $opt in
+    f)
+      arg_f="${OPTARG}"
+      ;;
+    d)
+      arg_d="${OPTARG}"
+      ;;
+    h)
+      usage
+      exit 0
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      usage
+      exit 1
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+# Check if arg_f is empty
+if [ -z "$arg_f" ]; then
+  echo "[ ERROR  ] No input fasta file provided. Example: $0 -f fasta_input_file.fasta"
+  usage
+  exit 1
+fi
+
+START=$(date +%s)
+time=$(date)
+
+echo "[INFO] Genotyping Influenza A segments for each strain (A/text/text/characters/4digits_gene)."
+echo "[INFO] Gene must of format: HA NA PB2 PB1 PA NP NS M (or MP)"
+echo "[INFO] Fasta file analysed: $arg_f"
+
+name="$(basename ${arg_f} .fasta)"
+name="$(basename $name .fa)"
+
+seqkit faidx ${arg_f}
+seqkit rmdup -i -n -d $name.dup.fasta ${arg_f} > $name.rmdup.fasta
+
+echo "[INFO] Duplicated sequences will be treated at the end of the pipeline"
+
+seq_names=$(grep ">" $name.rmdup.fasta)
+
+echo "" > $name.genotyped.fasta
+echo "Success	SeqName	Genotype	Identity	ConsistentMatches" > $name.genotyped.log
+
+function BLAST_sequences {
+        seq_name=$(echo $l | sed 's;>;;g')
+        echo "[INFO] Processing $seq_name"
+	seq=$(seqkit grep -r -p "$seq_name" $name.tmp.fasta)
+	content=$(blastn -db ${arg_d} -outfmt 7 -query  <(echo "$seq") -max_target_seqs 8 -num_threads 6 | sed '/^#.*/d' | sort -u -k2,2 | sort -k3,3rn)
+        echo "$content"
+        header_genotyped=$(echo "$content" | sed -e 's;PB2.*PB2-;PB2|;g' -e 's;PB1.*PB1-;PB1|;g' -e 's;PA.*PA-;PA|;g' -e 's;HA.*HA-;HA|;g' -e 's;NP.*NP-;NP|;g' -e 's;NA.*NA-;NA|;g' -e 's;NS.*NS-;NS|;g' -e 's;MP.*MP-;_MP|;g' -e 's;_M.*-M-;_M|;g' -e 's;\t.*;;g' | head -n 1)
+        identity=$(echo "$content" | head -n 1 | awk '{print $3}')
+	matches=$(echo "$content" | awk '{print $2}' | sed -e 's;.*PB2;PB2;g' -e 's;.*PB1;PB1;g' -e 's;.*PA;PA;g' -e 's;.*HA;HA;g' -e 's;.*NP;NP;g' -e 's;.*NA;NA;g' -e 's;.*NS;NS;g' -e 's;.*-M;M;g' )
+	best_match=$(echo "$matches" | head -n 1)
+	good_matches_number=$(echo "$matches" | grep $best_match$ | wc -l)
+        var=$(echo "$header_genotyped" | sed 's/\//\\\//g')
+        if (( $(echo "$identity > 80" | bc -l) )); then
+		if (( $(echo "$good_matches_number >= 2" | bc -l) )); then
+                	echo "[OK] $seq_name | Genotype found based on $good_matches_number consistent matches with a max identity of $identity%: $best_match"
+			echo "[OK]	$seq_name	$best_match	$identity	$good_matches_number" >> $name.genotyped.log
+			echo "Exporting sequence $header_genotyped"
+                	sed "s;>.*;>$var;g" <(echo "$seq") >> $name.genotyped.fasta
+                	echo ""
+		else
+			echo "[ERR] $seq_name | Genotype found based on less than 2 consistent matches with max identity of $identity% identity: $best_match"
+			echo "[ERR]	$seq_name	$best_match	$identity	$good_matches_number" >> $name.genotyped.log
+			sed "s;>.*;>$var;g" <(echo "$seq") >> $name.genotyped.fasta
+		fi
+
+        else
+		echo "[ERR] $seq_name | Genotype found based on only $good_matches_number consitent matches (too low) with a max identity of $identity%: $best_match"
+		echo "[ERR]	$seq_name	$best_match	$identity	$good_matches_number" >> $name.genotyped.log
+                sed "s;>.*;>$var;g" <(echo "$seq") >> $name.genotyped.fasta
+        fi
+}
+
+cp $name.rmdup.fasta $name.tmp.fasta
+echo "$seq_names" | while read -r l; do
+	BLAST_sequences
+done
+
+echo "[INFO] Processing duplicated sequences"
+
+dup_names=$(grep ">" $name.dup.fasta)
+cp $name.dup.fasta $name.tmp.fasta
+
+echo "$dup_names"
+echo "$dup_names" | while read -r l; do
+	BLAST_sequences
+done
+
+rm $name.tmp.fasta $name.dup.fasta $name.rmdup.fasta
+sort $name.genotyped.log > $name.genotyped.tmp.log
+mv $name.genotyped.tmp.log $name.genotyped.log
+
+END=$(date +%s);
+time=$(echo $((END-START)) | awk '{print int($1/60)"min and "int($1%60)"sec"}')
+echo "[INFO] Finished in $time."
+
