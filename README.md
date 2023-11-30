@@ -28,6 +28,7 @@ The available tools are quickly presented below, refer to their command-line man
 [seqkit]: https://bioinf.shenwei.me/seqkit/
 [blast]: https://www.biostars.org/p/266983/
 [concatenateSegments]: https://github.com/gtrichard/influenza_sequences_toolbox/blob/main/bin/concatenateSegments
+[fastaToGenotype]: https://github.com/gtrichard/influenza_sequences_toolbox/blob/main/bin/fastaToGenotype
 
 
 ## Citation
