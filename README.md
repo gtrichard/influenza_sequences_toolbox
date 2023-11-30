@@ -23,8 +23,10 @@ The available tools are quickly presented below, refer to their command-line man
 | Tool name         | Description                                          |
 | ----------------- | ---------------------------------------------------- |
 | [concatenateSegments] | Takes a fasta file as input and concatenates all 8 segments for each strain/sample if the sequence is of good quality. Requires [seqkit] to be available in your environment. |
+| [fastaToGenotype] | Takes a fasta file and a makeblastdb database as input to assign genotypes to each segments of the fasta file. Requires [seqkit] and [blast] to be available in your environment. |
 
 [seqkit]: https://bioinf.shenwei.me/seqkit/
+[blast]: https://www.biostars.org/p/266983/
 [concatenateSegments]: https://github.com/gtrichard/influenza_sequences_toolbox/blob/main/bin/concatenateSegments
 
 
