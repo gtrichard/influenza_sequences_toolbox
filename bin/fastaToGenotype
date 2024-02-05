@@ -98,7 +98,7 @@ function BLAST_sequences {
 	seq=$(seqkit grep -r -p "$seq_name" $name.tmp.fasta)
 	content=$(blastn -db ${arg_d} -outfmt 7 -query  <(echo "$seq") -max_target_seqs 8 -num_threads 6 | sed '/^#.*/d' | sort -u -k2,2 | sort -k3,3rn)
         echo "$content"
-        header_genotyped=$(echo "$content" | sed -e 's;PB2.*PB2-;PB2|;g' -e 's;PB1.*PB1-;PB1|;g' -e 's;PA.*PA-;PA|;g' -e 's;HA.*HA-;HA|;g' -e 's;NP.*NP-;NP|;g' -e 's;NA.*NA-;NA|;g' -e 's;NS.*NS-;NS|;g' -e 's;MP.*MP-;_MP|;g' -e 's;_M.*-M-;_M|;g' -e 's;\t.*;;g' | head -n 1)
+        header_genotyped=$(echo "$content" | sed -e 's;_PB2.*PB2-;_PB2|;g' -e 's;_PB1.*PB1-;_PB1|;g' -e 's;_PA.*PA-;_PA|;g' -e 's;_HA.*HA-;_HA|;g' -e 's;_NP.*NP-;_NP|;g' -e 's;_NA.*NA-;_NA|;g' -e 's;_NS.*NS-;_NS|;g' -e 's;_MP.*MP-;_MP|;g' -e 's;_M	.*-M-;_MP|;g' -e 's;\t.*;;g' | head -n 1)
         identity=$(echo "$content" | head -n 1 | awk '{print $3}')
 	matches=$(echo "$content" | awk '{print $2}' | sed -e 's;.*PB2;PB2;g' -e 's;.*PB1;PB1;g' -e 's;.*PA;PA;g' -e 's;.*HA;HA;g' -e 's;.*NP;NP;g' -e 's;.*NA;NA;g' -e 's;.*NS;NS;g' -e 's;.*-M;M;g' )
 	best_match=$(echo "$matches" | head -n 1)
@@ -135,13 +135,19 @@ dup_names=$(grep ">" $name.dup.fasta)
 cp $name.dup.fasta $name.tmp.fasta
 
 echo "$dup_names"
-echo "$dup_names" | while read -r l; do
-	BLAST_sequences
-done
 
-rm $name.tmp.fasta $name.dup.fasta $name.rmdup.fasta
-sort $name.genotyped.log > $name.genotyped.tmp.log
-mv $name.genotyped.tmp.log $name.genotyped.log
+if [ -z "$dup_names" ]
+then
+	echo "[INFO] No duplicated sequences"
+else
+	echo "$dup_names" | while read -r l; do
+		BLAST_sequences
+	done
+
+	rm $name.tmp.fasta $name.dup.fasta $name.rmdup.fasta
+	sort $name.genotyped.log > $name.genotyped.tmp.log
+	mv $name.genotyped.tmp.log $name.genotyped.log
+fi
 
 END=$(date +%s);
 time=$(echo $((END-START)) | awk '{print int($1/60)"min and "int($1%60)"sec"}')
