@@ -1,0 +1,166 @@
+#!/bin/bash
+
+# Define usage function
+usage() {
+    echo " Influenza Full Genome Annotator, by Gautier Richard, 05/02/2023.
+ Calls an influenza virus genome constellation (combination of the genotype of 8 segments) from a genotypeFasta log file by comparing it against a constellation database. 
+
+ This tool outputs two files:
+    .annotated.fasta ; which contains the input fasta sequences with formated sequence name and with the full genome genotype attributed as well as other metadata.
+    .annotated.log ; which contains the influenza genome constellation name attributed based on the full genome genotype database (see below).
+
+ Usage: $0 
+    
+    [ -l ] Log file obtained from fastToGenotype. Mandatory. Example: -f sample.genotyped.log
+
+    [ -f ] Fasta file to which the metadata will be added to sequences header.
+
+    [ -o ] Output prefix.
+    
+    [ -d ] Influenza genomes constellation databse. Tab-delimited file containing one line per full genome genotype, with the constellation name followed by the genotype of each segment in the following order:
+    PB2 PB1 PA HA NP NA NS MP 
+
+    Example of an appropriate db file:
+    H1avN1#A	PB2_EA	PB1_EA	PA_EA	HA_1C.2.1	NP_EA	NA_N1_EA	M_EA	NS_EA
+    H1avN1#B	PB2_EA_DK	PB1_EA_DK	PA_EA_DK	HA_1C.2.1	NP_EA_DK	NA_N1_EA	M_EA_DK	NS_EA_DK
+
+    These must match the genotypes attributed to each segment, which are inherited from the BLAST database used by the genotypeFasta tool.
+
+    [ -m ] Tab-delimited metadata database for the samples the fasta file originates from. This is used to format the output fasta properly as well as adding important metadata to the fasta headers.
+    Alternatively, an URL of a raw text file can be given (for instance raw version of tab-delimited file stored on github). Example:
+    sample	collection_date	region	collection_year	country	host	other
+    240013	2024-01-04	29	2024	France	swine	Various info that you want in the header
+    240023	2024-01-05	35	2024	France	swine	Various info that you want in the header
+    240024	2024-01-08	50	2024	France	swine	Various info that you want in the header
+    240025	2024-01-16	56	2024	France	swine	Various info that you want in the header
+    240037	2024-01-15	22	2024	France	swine	Various info that you want in the header
+
+    [ -h ] Prints help."
+}
+
+# Set default values for arguments
+arg_s=""
+
+# Parse arguments with getopt
+while getopts "f:l:d:o:m::h" opt; do
+  case $opt in
+    f)
+      arg_f="${OPTARG}"
+      ;;
+    l)
+      arg_l="${OPTARG}"
+      ;;
+    d)
+      arg_d="${OPTARG}"
+      ;;
+    o)
+      arg_o="${OPTARG}"
+      ;;
+    m)
+      arg_m="${OPTARG}"
+      ;;
+    h)
+      usage
+      exit 0
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      usage
+      exit 1
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+if [ -z "$arg_l" ]; then
+  echo "[ ERROR  ] No input fastaToGenotype log file provided. Example: $0 -i sample.samtools_consensus.lowcov.genotyped.log"
+  usage
+  exit 1
+fi
+
+if [ -z "$arg_d" ]; then
+  echo "[ ERROR  ] No input constellation database provided. Example: $0 -d Country_genotypes.txt. It must be a tab-delimited file containing one line per constellation, with the constellation name followed by the genotype of each segment in the following order:
+    PB2 PB1 PA HA NP NA NS MP
+
+    Example of an appropriate db file:
+    H1avN1#A    PB2_EA	PB1_EA	PA_EA	HA_1C.2.1	NP_EA	NA_N1_EA	M_EA	NS_EA
+    H1avN1#B    PB2_EA_DK	PB1_EA_DK	PA_EA_DK	HA_1C.2.1	NP_EA_DK	NA_N1_EA	M_EA_DK	NS_EA_DK
+"
+  usage
+  exit 1
+fi
+
+if [ -z "$arg_f" ]; then
+  echo "[ ERROR  ] No input fastaToGenotype genotyped fasta file provided. Example: $0 -f sample45.genotyped.fasta"
+  usage
+  exit 1
+fi
+
+if [ -z "$arg_o" ]; then
+  echo "[ ERROR  ] No output prefix provided. Example: $0 -o sample45"
+  usage
+  exit 1
+fi
+
+if [ -z "$arg_m" ]; then
+  echo "[ ERROR  ] No fasta file metadata database provided. Example: $0 -m sample_collection_dates.tsv"
+  usage
+  exit 1
+fi
+
+metadata_file=$(echo "${arg_m}" | sed 's;.*http.*;URL_DETECTED;g')
+geno=$(awk '{print $3}' $arg_l | sed '/Genotype/d')
+genocard=$(echo $geno | sed -e 's; ;\t;g' -e 's;-;_;g')
+genotype=$(grep "$genocard" $arg_d | awk '{print $1}')
+name="$(basename ${arg_l} .log)"
+
+echo "[ INFO ] Processing log file: ${arg_l}"
+echo "[ INFO ] Genotype found: $genotype"
+
+echo "$genotype" > ${arg_o}.constellation.log
+
+
+if [ "$metadata_file" == "URL_DETECTED" ]; then
+	wget -O ${arg_o}_db.txt ${arg_m}
+else
+	cp ${arg_m} ${arg_o}_db.txt
+fi
+
+sample=$(sed -e "s;\.samtools.*;;g" -e "s;\(-.\).*;\1;g" <(echo $name))
+sample_root=$(sed -e "s;-.*;;g" <(echo $sample))
+
+year=$(grep "$sample_root" ${arg_o}_db.txt | awk '{print $4}')
+if [ -z "$year" ]; then
+    echo "[INFO] Year not found. Reverting to sample-name-based collection year."
+    year=$(echo "20${sample:0:2}")
+fi
+
+dpt=$(grep $sample_root ${arg_o}_db.txt | awk '{print $3}')
+if [ -z "$dpt" ]; then
+    dpt=$(echo "XX")
+fi
+
+date=$(grep "$sample_root" ${arg_o}_db.txt | awk '{print $2}')
+if [ -z "$date" ]; then
+    echo "[INFO] Date not found."
+    date=$(echo "$year-01-01")
+fi
+
+country=$(grep "$sample_root" ${arg_o}_db.txt | awk '{print $5}')
+
+host=$(grep "$sample_root" ${arg_o}_db.txt | awk '{print $6}')
+
+other=$(grep "$sample_root" ${arg_o}_db.txt | awk '{print $7}')
+
+echo "[ INFO ] Exporting fasta file with clean headers to: ${arg_o}.annotated.fasta"
+if [ -z "$other" ]; then
+    sed -e "/>/ s;$;\|$genotype;" ${arg_f} | sed -e "s;.*_[1-8];>A\/${host}\/${country}\/${dpt}-${sample}\/${year};" | sed -e "/>/ s;$;|$date;" > ${arg_o}.annotated.fasta
+else
+    sed -e "/>/ s;$;\|$genotype;" ${arg_f} | sed -e "s;.*_[1-8];>A\/${host}\/${country}\/${dpt}-${sample}\/${year};" | sed -e "/>/ s;$;|$date;" | sed -e "/>/ s;$;|$other;" > ${arg_o}.annotated.fasta
+fi
+
+rm ${arg_o}_db.txt
