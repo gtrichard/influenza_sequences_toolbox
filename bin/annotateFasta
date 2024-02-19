@@ -114,14 +114,23 @@ fi
 
 metadata_file=$(echo "${arg_m}" | sed 's;.*http.*;URL_DETECTED;g')
 geno=$(awk '{print $3}' $arg_l | sed '/Genotype/d')
+PB2=$(echo "$geno" grep PB2)
+echo "" ${arg_o}_genocard.tmp
+for gene in PB2- PB1- PA- HA- NP- NA- M- NS-
+do
+	echo "$geno" | grep $gene >> ${arg_o}_genocard.tmp
+done
+geno=$(cat ${arg_o}_genocard.tmp)
 genocard=$(echo $geno | sed -e 's; ;\t;g' -e 's;-;_;g')
+echo "$geno"
+echo "$genocard"
 genotype=$(grep "$genocard" $arg_d | awk '{print $1}')
 name="$(basename ${arg_l} .log)"
 
 echo "[ INFO ] Processing log file: ${arg_l}"
 echo "[ INFO ] Genotype found: $genotype"
 
-echo "$genotype" > ${arg_o}.constellation.log
+echo "$name $genotype" > ${arg_o}.annotated.log
 
 
 if [ "$metadata_file" == "URL_DETECTED" ]; then
@@ -163,4 +172,4 @@ else
     sed -e "/>/ s;$;\|$genotype;" ${arg_f} | sed -e "s;.*_[1-8];>A\/${host}\/${country}\/${dpt}-${sample}\/${year};" | sed -e "/>/ s;$;|$date;" | sed -e "/>/ s;$;|$other;" > ${arg_o}.annotated.fasta
 fi
 
-rm ${arg_o}_db.txt
+rm ${arg_o}_db.txt ${arg_o}_genocard.tmp
