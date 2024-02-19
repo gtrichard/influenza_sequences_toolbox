@@ -122,12 +122,11 @@ do
 done
 geno=$(cat ${arg_o}_genocard.tmp)
 genocard=$(echo $geno | sed -e 's; ;\t;g' -e 's;-;_;g')
-echo "$geno"
-echo "$genocard"
 genotype=$(grep "$genocard" $arg_d | awk '{print $1}')
 name="$(basename ${arg_l} .log)"
 
 echo "[ INFO ] Processing log file: ${arg_l}"
+echo "[ INFO ] Segments clades: $genocard"
 echo "[ INFO ] Genotype found: $genotype"
 
 echo "$name $genotype" > ${arg_o}.annotated.log
