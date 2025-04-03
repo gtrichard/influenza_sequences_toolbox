@@ -1,13 +1,4 @@
 #!/bin/bash
-# conda create -n consensus -c bioconda -c conda-forge pysamstats samtools seqkit
-# conda activate consensus
-
-# $1 = reference fasta file
-# $2 = bam file aligned on reference fasta file
-# $3 = output prefix. 3 files are create: .samtools_consensus.fasta, .align_stats.tsv, .N_stats.tsv
-
-
-#!/bin/bash
 
 # Define usage function
 usage() {
@@ -15,7 +6,7 @@ usage() {
  Takes a BAM and reference fasta file as input to output a consensus sequence. Parameters used are adequate for short reads alignment (Illumina, Proton).
  
  This tool outputs five files:
-    .samtools_consensus.lowcov.fasta ; contains the consensus fasta sequences called with samtools consensus on all segments of the BAM file with the lowly covered nucleotides (<=3) as N.
+    .samtools_consensus.lowcov.fasta ; contains the consensus fasta sequences called with samtools consensus on all segments of the BAM file with the lowly covered nucleotides called as N.
     .align_stats.tsv ; contains the alignment statistics for all nucleotides of each sequence contained in the BAM file.
     .N_stats.tsv ; contains potential ambiguities alignment statistics for manual solving (ambiguities will always be N in the sequences).
     .lowcov.tsv ; contains the nucleotides that are not covered by enough reads to be trustfully called (<=3 reads).
@@ -27,6 +18,8 @@ usage() {
 
     [ -b ] input BAM file aligned on the reference fasta. Mandatory. Example: -b sample.bam
 
+    [ -c ] Minimum reads coverage. For instance if 10 is used, regions covered by 9 reads or less will be called as N. Mandatory. Example: -c 10
+
     [ -o ] output prefix. Mandatory. Example: -o sample
 
     [ -h ] Prints help."
@@ -36,13 +29,16 @@ usage() {
 arg_s=""
 
 # Parse arguments with getopt
-while getopts "r:b:o::h" opt; do
+while getopts "r:b:c:o::h" opt; do
   case $opt in
     r)
       arg_r="${OPTARG}"
       ;;
     b)
       arg_b="${OPTARG}"
+      ;;
+    c)
+      arg_c="${OPTARG}"
       ;;
     o)
       arg_o="${OPTARG}"
@@ -79,6 +75,13 @@ if [ -z "$arg_b" ]; then
   exit 1
 fi
 
+# Check if arg_b is empty
+if [ -z "$arg_c" ]; then
+  echo "[ ERROR  ] No reads minimum coverage parameter was supplied. Example: $0 -c 10"
+  usage
+  exit 1
+fi
+
 # Check if arg_o is empty
 if [ -z "$arg_o" ]; then
   echo "[ ERROR  ] No output prefix provided. Example: $0 -o sample"
@@ -91,11 +94,13 @@ fi
 START=$(date +%s)
 time=$(date)
 
+echo "[INFO] Indexing FASTA File $arg_r"
+samtools faidx $arg_r
 
 echo "[INFO] Indexing BAM File $arg_b"
-samtools index $arg_b
+bamtools index -in $arg_b
 
-echo "[INFO] Reporting alignment statistics to $3.align_stats.tsv"
+echo "[INFO] Reporting alignment statistics to $arg_o.align_stats.tsv"
 pysamstats --fasta $arg_r --type variation $arg_b -S samtools -D 150000 > $arg_o.align_stats.tsv
 
 echo "[INFO] Alignment-based consensus sequence calculation by samtools consensus"
@@ -106,8 +111,8 @@ header=$(head -n 1 $arg_o.align_stats.tsv)
 echo "ID	$header" > $arg_o.N_stats.tsv
 join <(seqkit locate -P -p "N" $arg_o.samtools_consensus.fasta | awk '{print $1"_"$5}' | sort -k1,1) <(awk '{print $1"_"$2"\t"$0}' $arg_o.align_stats.tsv | sort -k1,1) | sed 's; ;\t;g' | sort -k1,1 -k2,2n >> $arg_o.N_stats.tsv
 
-echo "[INFO] Masking lowly covered nucleotides from the consensus sequence with N (<=3 reads)"
-awk '$5 <= 3' $arg_o.align_stats.tsv | awk '{print $1"\t"$2":N"}' > $arg_o.lowcov.tsv
+echo "[INFO] Masking lowly covered nucleotides from the consensus sequence with N (< $arg_c reads)"
+awk '$5 < '$arg_c'' $arg_o.align_stats.tsv | awk '{print $1"\t"$2":N"}' > $arg_o.lowcov.tsv
 seg=$(awk '{print $1}' $arg_o.lowcov.tsv | sort | uniq)
 cp $arg_o.samtools_consensus.fasta $arg_o.samtools_consensus.lowcov.fasta
 echo "$seg" | while read -r s
