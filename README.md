@@ -1,3 +1,7 @@
+[![DOI](https://zenodo.org/badge/DOI/10.1093/ve/veae112.svg)](https://academic.oup.com/ve/article/11/1/veae112/7924081) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15132490.svg)](https://doi.org/10.5281/zenodo.15132490)
+
+
+
 # Influenza Sequences Toolbox
 A set of scripts and bioinformatic tools to process, handle and analyse Influenza viruses sequences.
 
