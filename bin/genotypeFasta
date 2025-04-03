@@ -96,16 +96,19 @@ START=$(date +%s)
 time=$(date)
 
 echo "[INFO] Genotyping Influenza A segments for each strain (A/text/text/characters/4digits_gene)."
-echo "[INFO] Gene must of format: HA NA PB2 PB1 PA NP NS M (or MP)"
+echo "[INFO] Genes must be of format: HA NA PB2 PB1 PA NP NS M (or MP)"
 echo "[INFO] Fasta file analysed: $arg_f"
 
 name="$(basename ${arg_f} .fasta)"
 name="$(basename $name .fa)"
 
 seqkit faidx ${arg_f}
-seqkit rmdup -i -n -d ${arg_o}.dup.fasta ${arg_f} > ${arg_o}.rmdup.fasta
+seqkit rmdup -i -n -d ${arg_o}.dup.fasta ${arg_f} > ${arg_o}.rmdup.fasta 
 
-echo "[INFO] Duplicated sequences will be treated at the end of the pipeline"
+echo "[INFO] Generating the BlastDB from fasta file: $arg_d"
+makeblastdb -in ${arg_d} -dbtype nucl
+
+echo "[INFO] Duplicated sequences in the query fasta will be treated at the end of the pipeline"
 
 seq_names=$(grep ">" ${arg_o}.rmdup.fasta)
 
@@ -116,29 +119,30 @@ function BLAST_sequences {
         seq_name=$(echo $l | sed 's;>;;g')
         echo "[INFO] Processing $seq_name"
 	seq=$(seqkit grep -r -p "$seq_name" ${arg_o}.tmp.fasta)
-	content=$(blastn -db ${arg_d} -outfmt 7 -query  <(echo "$seq") -max_target_seqs 8 -num_threads 6 | sed '/^#.*/d' | sort -u -k2,2 | sort -k3,3rn)
+	content=$(blastn -db ${arg_d} -outfmt 7 -query  <(echo "$seq") -max_target_seqs 10 -num_threads 10 | sed '/^#.*/d' | sort -u -k2,2 | sort -k3,3rn)
         echo "$content"
-        header_genotyped=$(echo "$content" | sed -e 's;_PB2.*PB2-;_PB2|;g' -e 's;_PB1.*PB1-;_PB1|;g' -e 's;_PA.*PA-;_PA|;g' -e 's;_HA.*HA-;_HA|;g' -e 's;_NP.*NP-;_NP|;g' -e 's;_NA.*NA-;_NA|;g' -e 's;_NS.*NS-;_NS|;g' -e 's;_MP.*MP-;_MP|;g' -e 's;_M	.*-M-;_MP|;g' -e 's;\t.*;;g' | head -n 1)
+        header_genotyped=$(echo "$content" | sed -e 's;_PB2\t.*PB2-;_PB2|;g' -e 's;_PB1\t.*PB1-;_PB1|;g' -e 's;_PA\t.*PA-;_PA|;g' -e 's;_HA\t.*HA-;_HA|;g' -e 's;_NP\t.*NP-;_NP|;g' -e 's;_NA\t.*NA-;_NA|;g' -e 's;_NS\t.*NS-;_NS|;g' -e 's;_MP\t.*MP-;_MP|;g' -e 's;_MP\t.*-M-;_MP|;g' -e 's;_M\t.*MP-;_MP|;g' -e 's;_M\t.*-M-;_MP|;g' -e 's;\t.*;;g' | head -n 1)
         identity=$(echo "$content" | head -n 1 | awk '{print $3}')
-	matches=$(echo "$content" | awk '{print $2}' | sed -e 's;.*PB2;PB2;g' -e 's;.*PB1;PB1;g' -e 's;.*PA;PA;g' -e 's;.*HA;HA;g' -e 's;.*NP;NP;g' -e 's;.*NA;NA;g' -e 's;.*NS;NS;g' -e 's;.*-M;M;g' )
+	matches=$(echo "$content" | awk '{print $2}' | sed -e 's;.*PB2;PB2;g' -e 's;.*PB1;PB1;g' -e 's;.*PA;PA;g' -e 's;.*HA;HA;g' -e 's;.*NP;NP;g' -e 's;.*NA;NA;g' -e 's;.*NS;NS;g' -e 's;.*-M;M;g' -e 's;.*MP;MP;g' )
 	best_match=$(echo "$matches" | head -n 1)
 	good_matches_number=$(echo "$matches" | grep $best_match$ | wc -l)
+	echo "$header_genotyped"
         var=$(echo "$header_genotyped" | sed 's/\//\\\//g')
         if (( $(echo "$identity > 80" | bc -l) )); then
-		if (( $(echo "$good_matches_number >= 2" | bc -l) )); then
+		if (( $(echo "$good_matches_number >= 3" | bc -l) )); then
                 	echo "[OK] $seq_name | Genotype found based on $good_matches_number consistent matches with a max identity of $identity%: $best_match"
 			echo "[OK]	$seq_name	$best_match	$identity	$good_matches_number" >> ${arg_o}.genotyped.log
 			echo "Exporting sequence $header_genotyped"
                 	sed "s;>.*;>$var;g" <(echo "$seq") >> ${arg_o}.genotyped.fasta
                 	echo ""
 		else
-			echo "[ERR] $seq_name | Genotype found based on less than 2 consistent matches with max identity of $identity% identity: $best_match"
+			echo "[ERR] $seq_name | Genotype found based on less than $good_matches_number consistent matches with max identity of $identity% identity: $best_match"
 			echo "[ERR]	$seq_name	$best_match	$identity	$good_matches_number" >> ${arg_o}.genotyped.log
 			sed "s;>.*;>$var;g" <(echo "$seq") >> ${arg_o}.genotyped.fasta
 		fi
 
         else
-		echo "[ERR] $seq_name | Genotype found based on only $good_matches_number consitent matches (too low) with a max identity of $identity%: $best_match"
+		echo "[ERR] $seq_name | Genotype found based on $good_matches_number consitent matches with a max identity of only $identity% (probably too low): $best_match"
 		echo "[ERR]	$seq_name	$best_match	$identity	$good_matches_number" >> ${arg_o}.genotyped.log
                 sed "s;>.*;>$var;g" <(echo "$seq") >> ${arg_o}.genotyped.fasta
         fi
