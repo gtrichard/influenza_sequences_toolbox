@@ -4,7 +4,7 @@ A set of scripts and bioinformatic tools to process, handle and analyse Influenz
 ## Installation
 
 ```
-conda create -n influenza_toolbox -c bioconda -c conda-forge pysamstats samtools seqkit blast
+conda create -n influenza_toolbox -c bioconda -c conda-forge pysamstats samtools seqkit blast bamtools
 conda activate influenza_toolbox
 bin_path=$(which seqkit | sed 's/seqkit$//g')
 git clone https://github.com/gtrichard/influenza_sequences_toolbox
