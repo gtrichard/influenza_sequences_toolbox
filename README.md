@@ -1,5 +1,3 @@
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7899721.svg)](https://doi.org/10.5281/zenodo.7899721)
-
 # Influenza Sequences Toolbox
 A set of scripts and bioinformatic tools to process, handle and analyse Influenza viruses sequences.
 
@@ -37,6 +35,8 @@ The available tools are quickly presented below, refer to their command-line man
 
 ## Citation
 
-If you use some of these scripts in your work, please cite this repository using the following DOI:
+If you use some of these scripts in your work, please cite this article and this repository DOI:
 
-Gautier RICHARD. (2023, May 5). gtrichard/influenza_sequences_toolbox: Influenza Sequences Toolbox. Zenodo. https://doi.org/10.5281/zenodo.7899721
+- Gautier Richard, Séverine Hervé, Amélie Chastagner, Stéphane Quéguiner, Véronique Beven, Edouard Hirchaud, Nicolas Barbier, Stéphane Gorin, Yannick Blanchard, Gaëlle Simon. (2025). Major change in swine influenza virus diversity in France owing to emergence and widespread dissemination of a newly introduced H1N2 1C genotype in 2020. Virus Evolution. Volume 11. Issue 1. 2025. veae112. https://doi.org/10.1093/ve/veae112
+
+- Gautier Richard. (2024). gtrichard/influenza_sequences_toolbox: Influenza Sequences Toolbox 0.5 (0.5). Zenodo. https://doi.org/10.5281/zenodo.14359874
