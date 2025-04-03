@@ -39,4 +39,4 @@ If you use some of these scripts in your work, please cite this article and this
 
 - Gautier Richard, Séverine Hervé, Amélie Chastagner, Stéphane Quéguiner, Véronique Beven, Edouard Hirchaud, Nicolas Barbier, Stéphane Gorin, Yannick Blanchard, Gaëlle Simon. (2025). Major change in swine influenza virus diversity in France owing to emergence and widespread dissemination of a newly introduced H1N2 1C genotype in 2020. Virus Evolution. Volume 11. Issue 1. 2025. veae112. https://doi.org/10.1093/ve/veae112
 
-- Gautier Richard. (2024). gtrichard/influenza_sequences_toolbox: Influenza Sequences Toolbox 0.5 (0.5). Zenodo. https://doi.org/10.5281/zenodo.14359874
+- Gautier Richard. (2025). gtrichard/influenza_sequences_toolbox: Influenza Sequences Toolbox 0.6 (0.6). Zenodo. https://doi.org/10.5281/zenodo.15132490
