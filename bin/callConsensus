@@ -112,7 +112,7 @@ echo "ID	$header" > $arg_o.N_stats.tsv
 join <(seqkit locate -P -p "N" $arg_o.samtools_consensus.fasta | awk '{print $1"_"$5}' | sort -k1,1) <(awk '{print $1"_"$2"\t"$0}' $arg_o.align_stats.tsv | sort -k1,1) | sed 's; ;\t;g' | sort -k1,1 -k2,2n >> $arg_o.N_stats.tsv
 
 echo "[INFO] Masking lowly covered nucleotides from the consensus sequence with N (< $arg_c reads)"
-awk '$5 < '$arg_c'' $arg_o.align_stats.tsv | awk '{print $1"\t"$2":N"}' > $arg_o.lowcov.tsv
+awk '$4 < '$arg_c'' $arg_o.align_stats.tsv | awk '{print $1"\t"$2":N"}' > $arg_o.lowcov.tsv
 seg=$(awk '{print $1}' $arg_o.lowcov.tsv | sort | uniq)
 cp $arg_o.samtools_consensus.fasta $arg_o.samtools_consensus.lowcov.fasta
 echo "$seg" | while read -r s
