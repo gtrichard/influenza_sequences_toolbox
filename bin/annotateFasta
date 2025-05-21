@@ -113,17 +113,18 @@ if [ -z "$arg_m" ]; then
 fi
 
 metadata_file=$(echo "${arg_m}" | sed 's;.*http.*;URL_DETECTED;g')
-geno=$(awk '{print $3}' $arg_l | sed '/Genotype/d')
-PB2=$(echo "$geno" grep PB2)
-echo "" ${arg_o}_genocard.tmp
-for gene in PB2- PB1- PA- HA- NP- NA- M- NS-
+geno=$(grep "[OK]" $arg_l | awk '{print $3}' | sort | uniq)
+#PB2=$(echo "$geno" grep PB2)
+echo "" > ${arg_o}_genocard.tmp
+for gene in PB2- PB1- PA- HA- NP- NA- M- MP- NS-
 do
 	echo "$geno" | grep $gene >> ${arg_o}_genocard.tmp
 done
-geno=$(cat ${arg_o}_genocard.tmp)
+geno=$(cat ${arg_o}_genocard.tmp | uniq)
 genocard=$(echo $geno | sed -e 's; ;\t;g' -e 's;-;_;g')
+echo "$genocard"
 genotype=$(grep "$genocard" $arg_d | awk '{print $1}')
-name="$(basename ${arg_l} .log)"
+name="$(grep "[OK]" $arg_l | awk '{print $2}' | sed 's;_.*;;g')"
 
 echo "[ INFO ] Processing log file: ${arg_l}"
 echo "[ INFO ] Segments clades: $genocard"
@@ -138,8 +139,20 @@ else
 	cp ${arg_m} ${arg_o}_db.txt
 fi
 
-sample=$(sed -e "s;\.samtools.*;;g" -e "s;\(-.\).*;\1;g" <(echo $name))
-sample_root=$(sed -e "s;-.*;;g" <(echo $sample))
+#sample=$(sed -e "s;\.samtools.*;;g" -e "s;\(-.\).*;\1;g" <(echo $name))
+sample=$(sed -e "s;\(-[0-9][0-9][0-9]\).*;\1;g"  <(echo ${arg_l}))
+test=$(sed 's;.*log;log;g' <(echo ${sample}))
+if [ "$test" == "log" ]; then
+	sample=$(sed -e "s;\(-[0-9][0-9]\).*;\1;g"  <(echo ${arg_l}))
+	test=$(sed 's;.*log;log;g' <(echo ${sample}))
+fi
+
+if [ "$test" == "log" ]; then
+        sample=$(sed -e "s;\(-[0-9]\).*;\1;g"  <(echo ${arg_l}))
+        test=$(sed 's;.*log;log;g' <(echo ${sample}))
+fi
+
+sample_root=$(sed -e "s;-.*;;g" <(echo ${arg_l}))
 
 year=$(grep "$sample_root" ${arg_o}_db.txt | awk '{print $4}')
 if [ -z "$year" ]; then
@@ -158,17 +171,19 @@ if [ -z "$date" ]; then
     date=$(echo "$year-01-01")
 fi
 
-country=$(grep "$sample_root" ${arg_o}_db.txt | awk '{print $5}')
+country=$(grep "$sample_root" ${arg_o}_db.txt | awk '{print $5}' | tr -d '\n' | tr -d '\r')
 
-host=$(grep "$sample_root" ${arg_o}_db.txt | awk '{print $6}')
+host=$(grep "$sample_root" ${arg_o}_db.txt | awk '{print $6}' | tr -d '\n' | tr -d '\r')
 
-other=$(grep "$sample_root" ${arg_o}_db.txt | awk '{print $7}')
+other=$(grep "$sample_root" ${arg_o}_db.txt | awk '{print $7}' | tr -d '\n' | tr -d '\r')
 
-echo "[ INFO ] Exporting fasta file with clean headers to: ${arg_o}.annotated.fasta"
+echo "$sample	$genotype	$genocard" > ${arg_o}.genotype.txt
+
+echo "[ INFO ] Exporting fasta file with clean headers to: ${arg_o}.annotated.fasta using ${arg_f} detected as ${genotype}"
 if [ -z "$other" ]; then
     sed -e "/>/ s;$;\|$genotype;" ${arg_f} | sed -e "s;.*_[1-8];>A\/${host}\/${country}\/${dpt}-${sample}\/${year};" | sed -e "/>/ s;$;|$date;" > ${arg_o}.annotated.fasta
 else
     sed -e "/>/ s;$;\|$genotype;" ${arg_f} | sed -e "s;.*_[1-8];>A\/${host}\/${country}\/${dpt}-${sample}\/${year};" | sed -e "/>/ s;$;|$date;" | sed -e "/>/ s;$;|$other;" > ${arg_o}.annotated.fasta
 fi
-
+ 
 rm ${arg_o}_db.txt ${arg_o}_genocard.tmp
