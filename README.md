@@ -36,6 +36,10 @@ The available tools are quickly presented below, refer to their command-line man
 [genotypeFasta]: https://github.com/gtrichard/influenza_sequences_toolbox/blob/main/bin/genotypeFasta
 [annotateFasta]: https://github.com/gtrichard/influenza_sequences_toolbox/blob/main/bin/annotateFasta
 
+## Database
+
+This repository contains a modified version of the OctoFlu database to have proper M gene assignment to pdm or EA clades using a format compatible with the genotypeFasta tool.
+
 
 ## Citation
 
@@ -44,3 +48,7 @@ If you use some of these scripts in your work, please cite this article and this
 - Gautier Richard, Séverine Hervé, Amélie Chastagner, Stéphane Quéguiner, Véronique Beven, Edouard Hirchaud, Nicolas Barbier, Stéphane Gorin, Yannick Blanchard, Gaëlle Simon. (2025). Major change in swine influenza virus diversity in France owing to emergence and widespread dissemination of a newly introduced H1N2 1C genotype in 2020. Virus Evolution. Volume 11. Issue 1. 2025. veae112. https://doi.org/10.1093/ve/veae112
 
 - Gautier Richard. (2025). gtrichard/influenza_sequences_toolbox: Influenza Sequences Toolbox 0.6 (0.6). Zenodo. https://doi.org/10.5281/zenodo.15132490
+
+If you use the modified OctoFlu database to genotype swIAV segments, please cite OctoFlu:
+
+- Anderson, T., Chang, J., Arendsee, Z., mazeller, 2022. flu-crew/octoFLU: MRA Publication Release. https://doi.org/10.5281/zenodo.7458929
