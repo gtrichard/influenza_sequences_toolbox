@@ -38,8 +38,7 @@ The available tools are quickly presented below, refer to their command-line man
 
 ## Database
 
-This repository contains a modified version of the OctoFlu database to have proper M gene assignment to pdm or EA clades using a format compatible with the genotypeFasta tool.
-
+This repository contains a modified version of the OctoFlu database to genotype swine influenza A viruses with proper M gene assignment to pdm or EA clades. The database is properly formatted to be used with the `-d` option of the `genotypeFasta` tool. 
 
 ## Citation
 
