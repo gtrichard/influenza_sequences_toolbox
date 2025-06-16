@@ -3,39 +3,41 @@
 # Define usage function
 usage() {
     echo " Influenza Segments Genotyper, by Gautier Richard, 30/11/2023.
- Genotypes segments of IAV strains/samples stored in a single fasta file using a BLAST database made with makeblastdb with specific headers formats.
+ Genotypes segments of IAV strains/samples stored in a single fasta file using a database fasta file with specific headers formats.
  Requires SeqKit and BLAST to be installed in your current environment.
  
- BLAST is recommended to be installed in your OS directly, conda installations of BLAST tend be 10 times slower.
+ BLAST is recommended to be installed in your OS directly, conda installations of BLAST can be slower.
 
- An internal check is made to ensure that the genotypes called are accurate. This works by comparing the best match to the genotype of the other matches.
- The potential thrown errors in the *.log file can thus simply be due to how the database is made (not enough consistent best matches for a single query).
+ An internal check is made to ensure that the genotypes called are accurate. This works by comparing the clade of the best match versus the clade of the other 9 best matches.
+ The potential thrown errors in the *.log file can thus simply be due to how the database is made (not enough consistent best matches for a single clade).
  
  The tool can work for virutally any influenza A sequence (human, avian, swine...).  What matters is the quality of annotation of your database, see below.
 
  Database annotation is not performed by this tool, this should be done by careful phylogenetic analyses.
 
  This tool outputs two files:
-    .genotyped.fasta ; which contains the input fasta sequences with the genotype of each segment added at the end of the headers in the format : |genotype
+    .genotyped.fasta ; which contains the input fasta sequences with the clades of each segment added at the end of the headers in the format : |genotype
     .genotyped.log ; which contains a summary of the blast results for each sequence, with potentially erroneous genotypes attributions at the start of the file. 
 
  Usage: $0 
     
-    [ -f ] FASTA file name. Mandatory. Example: -f seq_to_cat.fasta
-    Fasta headers require a specific format: A/text/text/characters/4digits(...)Segment(...)
-    Segment being: PB2, PB1, PA, HA, NP, NA, NS, M/MP.
+    [ -f ] FASTA file name. Mandatory. Example: -f sequences.fasta
+    Fasta headers require a specific format. They must end by `_Segment`, with Segment being one of: PB2, PB1, PA, HA, NP, NA, NS, M or MP.
+	
+	Example:
+	A/swine/France/35-210231/2021_PB2
 
-    [ -d ] BLAST database made by makeblastdb used by the tool to assign genotypes to segments. The database fasta headers must have a specific format for the tool to work:
-    >sequence/name;Genotype_info-Segment-Genotype_name_that_will_be_imported
+    [ -d ] Fasta file containing IAV segments clades classification. A BLAST database is made from this file using makeblastdb. 
+	Fasta headers must have a specific format: >sequence/name;Genotype_info-Segment-Genotype_name_that_will_be_imported
 
     Example:
     >A/sw/France/22-195423/2019;H1N1pdm-HA-1A.3.3.2
 
-    If a sequence matches this entry, it will assign 1A.3.3.2 as a genotype, i.e. what is after HA-, NA-, PB2-, PB1-, PA-, NP-, NS-, M- / MP- in the db headers.
-    The sequence name or the genotype present before the -HA doesn't matter, that's a useful field for you to better annotate the sequences (HxNx subtypes, etc).
-    The quality of the database is of utmost importance.
+    If a sequence matches this entry, it will assign 1A.3.3.2 as a clade, i.e. what is after HA-, NA-, PB2-, PB1-, PA-, NP-, NS-, M- / MP- in the fasta headers of the database.
+    The sequence name or the genotype present before the -HA doesn't matter, that is a useful field for you to better annotate the sequences (HxNx subtypes, etc).
+    The quality of the database is of utmost importance to insure good genotyping of IAV sequences.
 
-    [ -o ] Output prefix.
+    [ -o ] Output prefix. Example: seq ; this will produce seq.genotyped.fasta and seq.genotyped.log.
 
     [ -h ] Prints help."
 }
