@@ -4,11 +4,12 @@
 usage() {
     echo " Tabulize Genotyped Influenza Fasta, by Gautier Richard, 22/08/2025.
  Uses the output fasta file from genotypeFasta to make a tab-delimited table describing the clade of the 8 segments of each strain contained in the fasta file.
- Also attributes a constellation/genotype to each strain using a specific nomenclature (HA/NA/GGGGGG). 
- The resulting .txt file can easily be used to generate a metadata file for Nextstrain.
+ Also attributes a constellation/genotype summing up 8 segments clades using the nomenclature: HA/NA/GGGGGG; with G for internal genes PB2 PB1 PA NP MP NS.
+ The resulting .txt file can easily be used to generate a metadata file for Nextstrain to color strains based on their segments clade or 8 segments genotype.
 
  This tool outputs one file:
     .txt ; which contains a table with the following format:
+
 	name	HA	NA	PB2	PB1	PA	NP	MP	NS	Constellation
     A/swine/Denmark/SI22-07102-2/2022	H1A.3.3.2	N1EA.3	pdm	pdm	pdm	pdm	pdm	EA	H1A.3.3.2/N1EA.3/PPPPPE
 
@@ -16,7 +17,7 @@ usage() {
 
     [ -f ] FASTA file name. Must be the fasta file output from the genotypeFasta tool. Mandatory. Example: -f sequences.fasta
 	
-    [ -o ] Output prefix. Example: sequences_genotype_table ; this will produce sequences_genotype_table.txt containing the table of the strains genotypes.
+    [ -o ] Output prefix. Example: sequences_genotype_table ; this will produce sequences_genotype_table.txt.
 
     [ -h ] Prints help."
 }
