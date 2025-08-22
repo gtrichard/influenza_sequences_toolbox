@@ -1,0 +1,136 @@
+#!/bin/bash
+
+# Define usage function
+usage() {
+    echo " Tabulize Genotyped Influenza Fasta, by Gautier Richard, 22/08/2025.
+ Uses the output fasta file from genotypeFasta to make a tab-delimited table describing the clade of the 8 segments of each strain contained in the fasta file.
+ Also attributes a constellation/genotype to each strain using the international swine influenza nomenclature (HA/NA/GGGGGG).
+
+ This tool outputs one file:
+    .txt ; which contains a table with the following format:
+	name	HA	NA	PB2	PB1	PA	NP	MP	NS	Constellation
+    A/swine/Denmark/SI22-07102-2/2022	H1A.3.3.2	N1EA.3	pdm	pdm	pdm	pdm	pdm	EA	H1A.3.3.2/N1EA.3/PPPPPE
+
+ Usage: $0
+
+    [ -f ] FASTA file name. Must be the fasta file output from the genotypeFasta tool. Mandatory. Example: -f sequences.fasta
+	
+    [ -o ] Output prefix. Example: sequences_genotype_table ; this will produce sequences_genotype_table.txt containing the table of the strains genotypes.
+
+    [ -h ] Prints help."
+}
+
+# Parse arguments with getopt
+while getopts "f:o::h" opt; do
+  case $opt in
+    f)
+      arg_f="${OPTARG}"
+      ;;
+    o)
+      arg_o="${OPTARG}"
+      ;;
+    h)
+      usage
+      exit 0
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      usage
+      exit 1
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+# Check if arg_f is empty
+if [ -z "$arg_f" ]; then
+  echo "[ ERROR  ] No input fasta file provided. Example: $0 -f fasta_input_file.fasta"
+  usage
+  exit 1
+fi
+
+if [ -z "$arg_o" ]; then
+  echo "[ ERROR  ] No output prefix provided. Example: $0 -o sample45"
+  usage
+  exit 1
+fi
+
+echo "[INFO] Tabulizing clades by strains from the fasta file $arg_f"
+
+awk '
+BEGIN {
+    OFS = "\t";
+    print "name", "HA", "NA", "PB2", "PB1", "PA", "NP", "MP", "NS", "Constellation"
+}
+/^>/ {
+    # Remove any carriage returns first
+    gsub(/\r/, "");
+    
+    # Parse the header line
+    header = substr($0, 2);  # Remove ">"
+    split(header, parts, "|");
+    full_segment = parts[1];
+    clade = parts[2];
+    
+    # Extract isolate name (everything before last underscore)
+    isolate = full_segment;
+    sub(/_[^_]*$/, "", isolate);
+    
+    # Extract segment (everything after last underscore)
+    segment = full_segment;
+    sub(/.*_/, "", segment);
+    
+    # Store data
+    if (!(isolate in isolates)) {
+        isolate_order[++i] = isolate;
+        isolates[isolate] = 1;
+    }
+    data[isolate,segment] = clade;
+}
+END {
+    # Print all isolates
+    for (i = 1; i <= length(isolate_order); i++) {
+        isolate = isolate_order[i];
+        printf "%s", isolate;
+        
+        # Fixed segment order
+        n = split("HA NA PB2 PB1 PA NP MP NS", segments);
+        
+        # Collect internal gene codes for constellation
+        internal_gene_codes = "";
+        
+        for (j = 1; j <= n; j++) {
+            seg = segments[j];
+            val = ((isolate,seg) in data ? data[isolate,seg] : "-");
+            # Remove any remaining newlines/carriage returns
+            gsub(/[\r\n]/, "", val);
+            printf "%s%s", OFS, val;
+            
+            # Build internal gene code for PB2, PB1, PA, NP, MP, NS (positions 3-8)
+            if (j >= 3 && j <= 8) {
+                code = "?";
+                if (val == "EA") code = "E";
+                else if (val == "pdm") code = "P";
+                else if (val == "HS") code = "H";
+                else if (val == "-") code = "-";
+                else code = substr(val, 1, 1);  # First letter for unknown types
+                internal_gene_codes = internal_gene_codes code;
+            }
+        }
+        
+        # Build constellation: HA/NA/internal_gene_codes
+        ha_val = data[isolate,"HA"] ? data[isolate,"HA"] : "-";
+        na_val = data[isolate,"NA"] ? data[isolate,"NA"] : "-";
+        gsub(/[\r\n]/, "", ha_val);
+        gsub(/[\r\n]/, "", na_val);
+        
+        printf "%s%s/%s/%s", OFS, ha_val, na_val, internal_gene_codes;
+        printf "\n";
+    }
+}' "$arg_f" | tr -d '\r' > "$arg_o.txt"
+
+echo "[INFO] Success! Fasta file strains genotyping data got tabulized to $arg_o.txt"
