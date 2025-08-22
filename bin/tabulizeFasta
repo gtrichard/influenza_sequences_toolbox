@@ -4,7 +4,8 @@
 usage() {
     echo " Tabulize Genotyped Influenza Fasta, by Gautier Richard, 22/08/2025.
  Uses the output fasta file from genotypeFasta to make a tab-delimited table describing the clade of the 8 segments of each strain contained in the fasta file.
- Also attributes a constellation/genotype to each strain using the international swine influenza nomenclature (HA/NA/GGGGGG).
+ Also attributes a constellation/genotype to each strain using a specific nomenclature (HA/NA/GGGGGG). 
+ The resulting .txt file can easily be used to generate a metadata file for Nextstrain.
 
  This tool outputs one file:
     .txt ; which contains a table with the following format:
