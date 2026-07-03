@@ -22,7 +22,7 @@ usage() {
  Usage: $0 
     
     [ -f ] FASTA file name. Mandatory. Example: -f sequences.fasta
-    Fasta headers require a specific format. They must end by `_Segment`, with Segment being one of: PB2, PB1, PA, HA, NP, NA, NS, M or MP.
+    Fasta headers require a specific format. They must end by \`_Segment\`, with Segment being one of: PB2, PB1, PA, HA, NP, NA, NS, M or MP.
 	
 	Example:
 	A/swine/France/35-210231/2021_PB2
