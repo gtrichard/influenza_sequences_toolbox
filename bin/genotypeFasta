@@ -22,7 +22,7 @@ usage() {
  Usage: $0 
     
     [ -f ] FASTA file name. Mandatory. Example: -f sequences.fasta
-    Fasta headers require a specific format. They must end by `_Segment`, with Segment being one of: PB2, PB1, PA, HA, NP, NA, NS, M or MP.
+    Fasta headers require a specific format. They must end by \`_Segment\`, with Segment being one of: PB2, PB1, PA, HA, NP, NA, NS, M or MP.
 	
 	Example:
 	A/swine/France/35-210231/2021_PB2
@@ -131,23 +131,22 @@ function BLAST_sequences {
 	good_matches_number=$(echo "$matches" | grep $best_match$ | wc -l)
 	echo "$header_genotyped"
         var=$(echo "$header_genotyped" | sed 's/\//\\\//g')
-        if (( $(echo "$identity > 91" | bc -l) )); then
-		if (( $(echo "$good_matches_number >= 3" | bc -l) )); then
-                	echo "[OK] $seq_name | Genotype found based on $good_matches_number consistent matches with a max identity of $identity%: $best_match"
-			echo "[OK]	$seq_name	$best_match	$identity	$good_matches_number" >> ${arg_o}.genotyped.log
-			echo "Exporting sequence $header_genotyped"
-                	sed "s;>.*;>$var;g" <(echo "$seq") >> ${arg_o}.genotyped.fasta
-                	echo ""
-		else
-			echo "[ERR] $seq_name | Genotype found based on less than $good_matches_number consistent matches with max identity of $identity% identity: $best_match"
-			echo "[ERR]	$seq_name	$best_match	$identity	$good_matches_number" >> ${arg_o}.genotyped.log
-			sed "s;>.*;>$var;g" <(echo "$seq") >> ${arg_o}.genotyped.fasta
-		fi
-
+        if [[ $(printf "%.0f" $identity) -ge 91 ]]; then
+			if [[ $good_matches_number -ge 3 ]]; then
+	                	echo "[OK] $seq_name | Genotype found based on $good_matches_number consistent matches with a max identity of $identity%: $best_match"
+				echo "[OK]	$seq_name	$best_match	$identity	$good_matches_number" >> ${arg_o}.genotyped.log
+				echo "Exporting sequence $header_genotyped"
+	                	sed "s;>.*;>$var;g" <(echo "$seq") >> ${arg_o}.genotyped.fasta
+	                	echo ""
+			else
+				echo "[ERR] $seq_name | Genotype found based on less than $good_matches_number consistent matches with max identity of $identity% identity: $best_match"
+				echo "[ERR]	$seq_name	$best_match	$identity	$good_matches_number" >> ${arg_o}.genotyped.log
+				sed "s;>.*;>$var;g" <(echo "$seq") >> ${arg_o}.genotyped.fasta
+			fi
         else
-		echo "[ERR] $seq_name | Genotype found based on $good_matches_number consitent matches with a max identity of only $identity% (probably too low): $best_match"
-		echo "[ERR]	$seq_name	$best_match	$identity	$good_matches_number" >> ${arg_o}.genotyped.log
-                sed "s;>.*;>$var;g" <(echo "$seq") >> ${arg_o}.genotyped.fasta
+			echo "[ERR] $seq_name | Genotype found based on $good_matches_number consitent matches with a max identity of only $identity% (probably too low): $best_match"
+			echo "[ERR]	$seq_name	$best_match	$identity	$good_matches_number" >> ${arg_o}.genotyped.log
+	                sed "s;>.*;>$var;g" <(echo "$seq") >> ${arg_o}.genotyped.fasta
         fi
 }
 
