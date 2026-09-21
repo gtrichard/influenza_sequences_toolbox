@@ -1,0 +1,106 @@
+#!/bin/bash
+
+# Define usage function
+usage() {
+    echo " Influenza Segments Genotyper using Nextclade, by Gautier Richard, 05/11/2025
+ Genotypes segments of IAV strains/samples stored in a single fasta file using a the Nextclade tool.
+ Requires a Nextstrain environment accessible using :
+    nextstrain shell .
+
+ This tool outputs multiple files:
+    nextclade/${prefix}.{segment}.tree.json ; which contains the phylogenetic placement trees in auspice JSON format, per segment, of the input fastas.
+    nextclade/${prefix}.{segment}.csv ; which contains per segment sequence classification of the input fastas.
+    nextclade/${prefix}.{protein}.translations.fasta ; which contains the protein sequences of input fastas.
+    nextclade/${prefix}.genotype.txt ; which contains the genotype information of the input fastas.
+
+ Usage: $0
+
+    [ -f ] FASTA file name. Mandatory. Example: -f sequences.fasta
+        Segments are recognized automatically through sequence analysis. Each strain should have the same fasta header and end with the segment name such as:
+		sequence/name/info-anything/_{segment} ; with {segment} being: HA, NA, PB2, PB1, PA, NP, M or MP, NS. Underscores ( _ ) should be avoided in the sequence name.
+
+    [ -d ] Nextclade dataset folder. Example: -d nextclade_data\data\community\anses\swIAV
+        The nextclade database must contain the following folders: H1, H3, N1, N2, PB2, PB1, PA, NP, MP, NS
+
+    [ -o ] Output folder path. Example: sample001. This will produce outputs in the nextclade folder (required for a scan of csv files to produce the genotype.txt). 
+	Example using an input file called sequences.fasta and output path named sample001:
+	sample001/nextclade/sequences.H1.tree.json, sample001/nextclade/sequences.H3.tree.json...
+
+    [ -h ] Print help and exit."
+}
+
+
+# Set default values for arguments
+arg_s=""
+
+# Parse arguments with getopt
+while getopts "f:d:o::h" opt; do
+  case $opt in
+    f)
+      arg_f="${OPTARG}"
+      ;;
+    d)
+      arg_d="${OPTARG}"
+      ;;
+    o)
+      arg_o="${OPTARG}"
+      ;;
+    h)
+      usage
+      exit 0
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      usage
+      exit 1
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+# Check if arg_f is empty
+if [ -z "$arg_f" ]; then
+  echo "[ ERROR  ] No input fasta file provided. Example: $0 -f sequences.fasta"
+  usage
+  exit 1
+fi
+
+if [ -z "$arg_o" ]; then
+  echo "[ ERROR  ] No output prefix provided. Example: $0 -o sample45"
+  usage
+  exit 1
+fi
+
+if [ -z "$arg_d" ]; then
+  echo "[ ERROR  ] No database provided. Example: $0 -d nextclade_data\data\community\anses\swIAV"
+  usage
+  exit 1
+fi
+
+
+START=$(date +%s)
+time=$(date)
+
+name="$(basename -s .fasta "${arg_f}")"
+name="$(basename -s .fas "${name}")"
+name="$(basename -s .fa "${name}")"
+echo "Genotyping $name"
+
+for seg in H1 H3 N2 N1 PB2 PB1 PA MP NS NP;
+do
+	nextclade run -D ${arg_d}/$seg ${arg_f} --output-tree ${arg_o}/nextclade/${name}.$seg.tree.json --output-csv ${arg_o}/nextclade/${name}.$seg.txt --silent
+	sed -e 's;_HA;;g' -e 's;_NA;;g' -e 's;_PB2;;g' -e 's;_PB1;;g' -e 's;_PA;;g' -e 's;_NP;;g' -e 's;_MP;;g' -e 's;_NS;;g' ${arg_o}/nextclade/${name}.$seg.txt > ${arg_o}/nextclade/${seg}_result.csv
+	rm  ${arg_o}/nextclade/${name}.$seg.txt
+done
+
+zip -q ${arg_o}/nextclade/$name.trees.zip ${arg_o}/nextclade/*.tree.json
+rm ${arg_o}/nextclade/*.tree.json
+
+nextcladeCombine -i ${arg_o}/nextclade -o ${arg_o}/nextclade/${name}.genotyped.txt
+sleep 1
+zip -q ${arg_o}/nextclade/$name.genotyping.zip ${arg_o}/nextclade/*_result.csv
+rm ${arg_o}/nextclade/*_result.csv

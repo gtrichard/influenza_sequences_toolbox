@@ -1,0 +1,195 @@
+#!/usr/bin/env python3
+import os
+import csv
+import argparse
+from pathlib import Path
+import sys
+
+# ======================
+# Arguments
+# ======================
+parser = argparse.ArgumentParser(description="Combine Nextclade CSV results into a single tabulated file.")
+parser.add_argument(
+    "-i", "--input_dir",
+    required=True,
+    help="Path to the folder containing Nextclade CSV files."
+)
+parser.add_argument(
+    "-o", "--output_file",
+    required=True,
+    help="Path to the output tabulated TXT file."
+)
+args = parser.parse_args()
+
+input_dir = args.input_dir
+output_file = args.output_file
+
+# ======================
+# Initial checks
+# ======================
+
+input_path = Path(input_dir)
+if not input_path.exists():
+    sys.exit(f"Input directory does not exist: {input_path}")
+if not input_path.is_dir():
+    sys.exit(f"The specified input path is not a directory: {input_path}")
+
+output_parent = Path(output_file).parent
+if output_parent and not output_parent.exists():
+    print(f"Output directory does not exist, creating it: {output_parent}")
+    output_parent.mkdir(parents=True, exist_ok=True)
+
+
+# ======================
+# Utility functions
+# ======================
+def first_letter(clade: str) -> str:
+    """
+    Return a short representative letter for an internal gene clade.
+    Handles common influenza clade prefixes (EA, PDM, TRIG, LAIV, HS).
+    """
+    if not clade or clade.strip() in {"-", "?", ""}:
+        return "-"
+
+    c = clade.strip().upper()
+
+    # Handle known prefixes
+    if c.startswith("PDM"):
+        return "P"
+    elif c.startswith("EADK"):
+        return "D"
+    elif c.startswith("EA"):
+        return "E"
+    elif c.startswith("TRIG"):
+        return "T"
+    elif c.startswith("LAIV"):
+        return "L"
+    elif c.startswith("HS"):
+        return "H"
+    elif c.startswith("SPILLOVER"):
+        return "S"
+
+    # Default: first alphanumeric letter
+    for ch in c:
+        if ch.isalnum():
+            return ch
+    return "-"
+
+def removeAfterN(yourStr, nth, occurenceOf):
+    return occurenceOf.join(yourStr.split(occurenceOf)[:nth])
+
+def simplify_clades(clade: str) -> str:
+    """Simplify clade names for shorter representation."""
+    if not clade or clade == "-":
+        return "-"
+    clade = clade.lower()
+    if clade.startswith("h1"):
+        return clade.split(".", 1)[0].upper()
+    elif clade.startswith("h3"):
+        return removeAfterN(clade, 2, ".").upper()
+    elif clade.startswith("n2."):
+        return removeAfterN(clade, 2, ".").upper()
+    elif clade.startswith("n1."):
+        return removeAfterN(clade, 2, ".").upper()
+    elif clade.startswith("n1"):
+        return clade.split(".", 1)[0].upper()
+    elif clade.startswith("n2"):
+        return clade.split(".", 1)[0].upper()
+    else:
+        return clade.upper()
+
+# ======================
+# Load CSV files
+# ======================
+genes = ["H1", "H3", "N1", "N2", "PB2", "PB1", "PA", "NP", "MP", "NS"]
+data = {gene: {} for gene in genes}
+
+csv_files = list(input_path.glob("*.csv"))
+
+if not csv_files:
+    sys.exit("No CSV files found in the specified directory.")
+#for f in csv_files:
+    #print(f"  - {f.name}")
+
+for csv_file in csv_files:
+    gene = csv_file.stem.replace("_result", "")
+    if gene not in data:
+        print(f"Ignoring file (unrecognized gene): {csv_file.name}")
+        continue
+
+    #print(f"Reading file {csv_file.name} for gene {gene}...")
+    with csv_file.open(encoding="utf-8-sig", newline='') as f:
+        # Use DictReader so we can use column names directly
+        sample = f.read(2048)
+        f.seek(0)
+        try:
+            dialect = csv.Sniffer().sniff(sample, delimiters=";,")
+        except csv.Error:
+            dialect = csv.excel
+            dialect.delimiter = ";"
+
+        reader = csv.DictReader(f, dialect=dialect)
+        count = 0
+        bad_rows = 0
+
+        for row in reader:
+            # Skip completely empty or malformed rows
+            if not row or not row.get("seqName"):
+                bad_rows += 1
+                continue
+
+            seq_name = row["seqName"].strip()
+            clade = row.get("clade", "").strip()
+
+            # Skip lines with no clade info (Nextclade failed)
+            if clade == "" or clade == "-" or "Unable to align" in str(row.values()):
+                bad_rows += 1
+                continue
+
+            data[gene][seq_name] = clade
+            count += 1
+
+        #print(f"{count} valid sequences loaded for {gene} ({bad_rows} skipped).")
+
+# ======================
+# Collect all unique sequence names
+# ======================
+all_names = set()
+for gene_dict in data.values():
+    all_names.update(gene_dict.keys())
+
+print(f"Total unique sequences found: {len(all_names)}")
+
+if not all_names:
+    sys.exit("No sequences were extracted from the CSV files.")
+
+#for gene, gene_dict in data.items():
+    #print(f"{gene}: {len(gene_dict)} entries")
+
+# ======================
+# Generate combined table
+# ======================
+print(f"Generating combined output file...")
+with open(output_file, "w", newline='') as f:
+    writer = csv.writer(f, delimiter='\t')
+    header = ["name","HA","NA","PB2","PB1","PA","NP","MP","NS","Genotype","Clades","Lineage"]
+    writer.writerow(header)
+
+    for name in sorted(all_names):
+        ha = data.get("H1", {}).get(name) or data.get("H3", {}).get(name) or "-"
+        na = data.get("N1", {}).get(name) or data.get("N2", {}).get(name) or "-"
+        pb2 = data["PB2"].get(name, "-") or "-"
+        pb1 = data["PB1"].get(name, "-") or "-"
+        pa  = data["PA"].get(name, "-") or "-"
+        np = data["NP"].get(name, "-") or "-"
+        mp = data["MP"].get(name, "-") or "-"
+        ns = data["NS"].get(name, "-") or "-"
+        mp = data["MP"].get(name, "-") or "-"
+
+        genotype = f"{ha}/{na}/{first_letter(pb2)}{first_letter(pb1)}{first_letter(pa)}{first_letter(np)}{first_letter(mp)}{first_letter(ns)}"
+        subtype = f"{ha}/{na}"
+        subtype_simple = f"{simplify_clades(ha)}/{simplify_clades(na)}"
+
+        writer.writerow([name, ha, na, pb2, pb1, pa, np, mp, ns, genotype, subtype, subtype_simple])
+
+print(f"Combined results saved to: {output_file}")

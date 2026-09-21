@@ -8,7 +8,7 @@ A set of scripts and bioinformatic tools to process, handle and analyse Influenz
 ## Installation
 
 ```
-conda create -n influenza_toolbox -c bioconda -c conda-forge pysamstats samtools seqkit blast bamtools
+conda create -n influenza_toolbox -c bioconda -c conda-forge pysamstats samtools seqkit blast bamtools nextclade zip
 conda activate influenza_toolbox
 bin_path=$(which seqkit | sed 's/seqkit$//g')
 git clone https://github.com/gtrichard/influenza_sequences_toolbox
@@ -29,6 +29,7 @@ The available tools are quickly presented below, refer to their command-line man
 | [genotypeFasta] | Takes a fasta file and a makeblastdb database as input to assign genotypes to each segments of the fasta file. |
 | [tabulizeFasta] | Takes the fasta file output from the genotypeFasta tool to create a tab-delimited txt file with genotype information of each strain for an easy creation of metadata files for Nextstrain. |
 | [annotateFasta] | Takes a genotypeFasta log file and fasta file as input, as well as two tab-delimited database files, to annotate the full genome genotype as well as formating the strain names and adding important metadata to the fasta headers. |
+| [nextcladeGenotype] | With a fasta file and a nextclade dataset as input, produces a genotyping table of the IAV strains contained in the fasta file. |
 
 [seqkit]: https://bioinf.shenwei.me/seqkit/
 [blast]: https://www.biostars.org/p/266983/
@@ -37,10 +38,13 @@ The available tools are quickly presented below, refer to their command-line man
 [genotypeFasta]: https://github.com/gtrichard/influenza_sequences_toolbox/blob/main/bin/genotypeFasta
 [annotateFasta]: https://github.com/gtrichard/influenza_sequences_toolbox/blob/main/bin/annotateFasta
 [tabulizeFasta]: https://github.com/gtrichard/influenza_sequences_toolbox/blob/main/bin/tabulizeFasta
+[nextcladeGenotype]: https://github.com/gtrichard/influenza_sequences_toolbox/blob/main/bin/nextcladeGenotype
 
-## Database
+## Databases
 
-This repository contains a modified version of the OctoFlu database to genotype swine influenza A viruses with proper M gene assignment to pdm or EA clades. The database is properly formatted to be used with the `-d` option of the `genotypeFasta` tool. 
+This repository contains a modified version of the OctoFlu database to genotype swine influenza A viruses with proper M gene assignment to pdm or EA clades. The database is properly formatted to be used with the `-d` option of the `genotypeFasta` tool.
+
+A Nextclade dataset for swine influenza A viruses for the [nextcladeGenotype] tool (`-d` parameter) is available at: https://github.com/nextstrain/nextclade_data/tree/release/data/community/anses/swIAV
 
 ## Citation
 
