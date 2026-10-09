@@ -48,10 +48,14 @@ A Nextclade dataset for swine influenza A viruses for the [nextcladeGenotype] to
 
 ## Citation
 
-If you use some of these scripts in your work, please cite this article and this repository DOI:
+- If you use some of these scripts in your work, please cite this article and this repository DOI:
 
-- Gautier Richard, Séverine Hervé, Amélie Chastagner, Stéphane Quéguiner, Véronique Beven, Edouard Hirchaud, Nicolas Barbier, Stéphane Gorin, Yannick Blanchard, Gaëlle Simon. (2025). Major change in swine influenza virus diversity in France owing to emergence and widespread dissemination of a newly introduced H1N2 1C genotype in 2020. Virus Evolution. Volume 11. Issue 1. 2025. veae112. https://doi.org/10.1093/ve/veae112
+Gautier Richard, Séverine Hervé, Amélie Chastagner, Stéphane Quéguiner, Véronique Beven, Edouard Hirchaud, Nicolas Barbier, Stéphane Gorin, Yannick Blanchard, Gaëlle Simon. (2025). Major change in swine influenza virus diversity in France owing to emergence and widespread dissemination of a newly introduced H1N2 1C genotype in 2020. Virus Evolution. Volume 11. Issue 1. 2025. veae112. https://doi.org/10.1093/ve/veae112
 
-If you use the modified OctoFlu database to genotype swIAV segments, please cite OctoFlu:
+- If you use the modified OctoFlu database to genotype swIAV segments, please cite OctoFlu:
 
-- Anderson, T., Chang, J., Arendsee, Z., mazeller, 2022. flu-crew/octoFLU: MRA Publication Release. https://doi.org/10.5281/zenodo.7458929
+Anderson, T., Chang, J., Arendsee, Z., mazeller, 2022. flu-crew/octoFLU: MRA Publication Release. https://doi.org/10.5281/zenodo.7458929
+
+- If you use the nextcladeGenotype tool, please cite:
+
+Gautier Richard, Benjamin C. Mollett, Pia Ryt-Hansen, Séverine Hervé, Martí Cortey Marquès, Enric Mateu, Ana Moreno, Chiara Chiapponi, Lars Erik Larsen, Timm Harder, Helen E. Everett, Gaëlle Simon. (2026). Genetic diversity and phylogeography of swine influenza A virus in 2013-2022 in Europe using a harmonized genotyping nomenclature. bioRxiv 2026.09.21.753142; doi: https://doi.org/10.64898/2026.09.21.753142
